@@ -15,6 +15,7 @@ import android.app.Activity;
 import android.app.ActivityThread;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
+import android.app.PendingIntent.OnFinished;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -68,6 +69,9 @@ public class ShadowPendingIntent {
   private int flags;
   private String creatorPackage;
   private boolean canceled;
+
+  // Options when the pendingIntent was sent last time.
+  @Nullable private Bundle lastSendOptions;
 
   @Implementation
   protected static PendingIntent getActivity(
@@ -179,6 +183,8 @@ public class ShadowPendingIntent {
       intentsToSend = savedIntents;
     }
 
+    lastSendOptions = options;
+
     ActivityThread activityThread = (ActivityThread) RuntimeEnvironment.getActivityThread();
     ShadowInstrumentation shadowInstrumentation = Shadow.extract(activityThread.getInstrumentation());
     if (isActivityIntent()) {
@@ -251,13 +257,23 @@ public class ShadowPendingIntent {
   }
 
   /**
+   * @return the options caller provides in the last {@link PendingIntent#send(Context, int, Intent,
+   *     OnFinished, Handler, String, Bundle)} call.
+   */
+  @Nullable
+  public Bundle getLastSendOptions() {
+    return lastSendOptions;
+  }
+
+  /**
    * This returns the last Intent in the Intent[] to be delivered when the PendingIntent is sent.
    * This method is particularly useful for PendingIntents created with a single Intent:
+   *
    * <ul>
-   *   <li>{@link #getActivity(Context, int, Intent, int)}</li>
-   *   <li>{@link #getActivity(Context, int, Intent, int, Bundle)}</li>
-   *   <li>{@link #getBroadcast(Context, int, Intent, int)}</li>
-   *   <li>{@link #getService(Context, int, Intent, int)}</li>
+   *   <li>{@link #getActivity(Context, int, Intent, int)}
+   *   <li>{@link #getActivity(Context, int, Intent, int, Bundle)}
+   *   <li>{@link #getBroadcast(Context, int, Intent, int)}
+   *   <li>{@link #getService(Context, int, Intent, int)}
    * </ul>
    *
    * @return the final Intent to be delivered when the PendingIntent is sent
