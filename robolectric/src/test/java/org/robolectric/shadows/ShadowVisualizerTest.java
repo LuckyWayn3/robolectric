@@ -1,10 +1,13 @@
 package org.robolectric.shadows;
 
 import static android.os.Build.VERSION_CODES.GINGERBREAD;
+import static android.os.Build.VERSION_CODES.KITKAT;
 import static com.google.common.truth.Truth.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
+import android.media.audiofx.AudioEffect;
 import android.media.audiofx.Visualizer;
+import android.media.audiofx.Visualizer.MeasurementPeakRms;
 import android.media.audiofx.Visualizer.OnDataCaptureListener;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import java.util.Arrays;
@@ -92,6 +95,28 @@ public class ShadowVisualizerTest {
 
     assertThat(status).isEqualTo(Visualizer.SUCCESS);
     assertThat(visualizer.getCaptureSize()).isEqualTo(2000);
+  }
+
+  @Config(minSdk = KITKAT)
+  @Test
+  public void getMeasurementPeakRms_returnsRmsFromSource() {
+    shadowOf(visualizer)
+        .setSource(
+            new VisualizerSource() {
+              @Override
+              public int getPeakRms(MeasurementPeakRms measurement) {
+                measurement.mPeak = 1;
+                measurement.mRms = 2;
+                return AudioEffect.ERROR;
+              }
+            });
+    MeasurementPeakRms measurement = new MeasurementPeakRms();
+
+    int result = visualizer.getMeasurementPeakRms(measurement);
+
+    assertThat(result).isEqualTo(AudioEffect.ERROR);
+    assertThat(measurement.mPeak).isEqualTo(1);
+    assertThat(measurement.mRms).isEqualTo(2);
   }
 
   @Test
